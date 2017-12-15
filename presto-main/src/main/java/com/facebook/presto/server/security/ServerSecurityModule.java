@@ -24,6 +24,7 @@ import javax.servlet.Filter;
 
 import java.util.function.Predicate;
 
+import static com.facebook.presto.server.security.SecurityConfig.AuthenticationType.JDBC;
 import static com.facebook.presto.server.security.SecurityConfig.AuthenticationType.KERBEROS;
 import static com.facebook.presto.server.security.SecurityConfig.AuthenticationType.LDAP;
 import static io.airlift.configuration.ConditionalModule.installModuleIf;
@@ -54,6 +55,17 @@ public class ServerSecurityModule
                             .to(LdapFilter.class)
                             .in(Scopes.SINGLETON);
                 });
+
+        bindSecurityConfig(
+                securityConfig -> securityConfig.getAuthenticationType() == JDBC,
+                binder -> {
+                    configBinder(binder).bindConfig(JdbcConfig.class);
+                    Multibinder.newSetBinder(binder, Filter.class, TheServlet.class)
+                            .addBinding()
+                            .to(JdbcFilter.class)
+                            .in(Scopes.SINGLETON);
+                }
+        );
     }
 
     private void bindSecurityConfig(Predicate<SecurityConfig> predicate, Module module)
